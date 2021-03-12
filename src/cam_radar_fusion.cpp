@@ -45,7 +45,7 @@ CamRadarFusionApp::TransformPoint(const pcl::PointXYZ &in_point, const tf::Stamp
 	return pcl::PointXYZ(tf_point_t.x(), tf_point_t.y(), tf_point_t.z());
 }
 
-void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr &in_image_msg , const sensor_msgs::PointCloud2::ConstPtr &in_cloud_msg)
+void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr &in_image_msg , const sensor_msgs::PointCloud2ConstPtr &in_cloud_msg)
 {
 	if (!cam_radar_tf_ok_)
 	{
@@ -200,13 +200,13 @@ void CamRadarFusionApp::InitializeRosIo(ros::NodeHandle &in_private_handle)
 	                                                     1,
 	                                                     &CamRadarFusionApp::IntrinsicsCallback, this);
 
-	ROS_INFO("[%s] Subscribing to... %s", __APP_NAME__, image_src.c_str());
-	cloud_subscriber_.subscribe(in_private_handle,
-	                            "clodud_in",
-	                            1);
 	ROS_INFO("[%s] Subscribing to... %s", __APP_NAME__, points_src.c_str());
+	cloud_subscriber_.subscribe(in_private_handle,
+		                        points_src.c_str(),
+	                            1);
+	ROS_INFO("[%s] Subscribing to... %s", __APP_NAME__, image_src.c_str());
 	image_subscriber_.subscribe(in_private_handle,
-	                            "image_in",
+		                        image_src.c_str(),
 	                            1); 
 
 	ROS_INFO("[%s] Subscribing to %s and %s to approximate time synchronizer.", __APP_NAME__, image_src.c_str(), points_src.c_str());

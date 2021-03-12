@@ -55,6 +55,8 @@
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/CameraInfo.h>
 
+#include <image_geometry/pinhole_camera_model.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl_ros/transforms.h>
@@ -106,7 +108,7 @@ class CamRadarFusionApp
 	//float                               fx_, fy_, cx_, cy_;
 	//pcl::PointCloud<pcl::PointXYZRGB>   colored_cloud_;
 
-	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::CompressedImage> SyncPolicyT;
+	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::CompressedImage, sensor_msgs::PointCloud2> SyncPolicyT;
 	//typedef message_filters::Synchronizer<SyncPolicyT>* cloud_synchronizer_;
 	typedef message_filters::Synchronizer<SyncPolicyT> Cloud_Sync;
 	boost::shared_ptr<Cloud_Sync>        cloud_synchronizer_;
@@ -116,7 +118,7 @@ class CamRadarFusionApp
 	
 	pcl::PointXYZ TransformPoint(const pcl::PointXYZ &in_point, const tf::StampedTransform &in_transform);
 
-	void FusionCallback(const sensor_msgs::CompressedImageConstPtr& in_image_msg, const sensor_msgs::PointCloud2::ConstPtr& in_cloud_msg);
+	void FusionCallback(const sensor_msgs::CompressedImageConstPtr& in_image_msg, const sensor_msgs::PointCloud2ConstPtr& in_cloud_msg);
 
 	/*!
 	 * Obtains Transformation between two transforms registered in the TF Tree
