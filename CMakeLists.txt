@@ -4,6 +4,7 @@ project(cam_radar_fusion)
 find_package(catkin REQUIRED COMPONENTS
         cv_bridge
         image_transport
+        image_geometry 
         pcl_conversions
         pcl_ros
         roscpp

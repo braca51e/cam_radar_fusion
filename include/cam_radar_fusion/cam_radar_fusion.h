@@ -97,7 +97,7 @@ class CamRadarFusionApp
 	//cv::Mat                             distortion_coefficients_;
 	//cv::Mat                             current_frame_;
 
-	//std::string 						image_frame_id_;
+	std::string 						image_frame_id_;
 
 	//bool                                processing_;
 	bool                                camera_info_ok_;
@@ -109,14 +109,14 @@ class CamRadarFusionApp
 	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::CompressedImage> SyncPolicyT;
 	//typedef message_filters::Synchronizer<SyncPolicyT>* cloud_synchronizer_;
 	typedef message_filters::Synchronizer<SyncPolicyT> Cloud_Sync;
-	boos::shared_ptr<Cloud_Sync>        cloud_synchronizer_;
+	boost::shared_ptr<Cloud_Sync>        cloud_synchronizer_;
 
 	message_filters::Subscriber<sensor_msgs::PointCloud2>       cloud_subscriber_;
 	message_filters::Subscriber<sensor_msgs::CompressedImage>   image_subscriber_;
 	
 	pcl::PointXYZ TransformPoint(const pcl::PointXYZ &in_point, const tf::StampedTransform &in_transform);
 
-	void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr& in_image_msg, const sensor_msgs::PointCloud2::ConstPtr& in_cloud_msg);
+	void FusionCallback(const sensor_msgs::CompressedImageConstPtr& in_image_msg, const sensor_msgs::PointCloud2::ConstPtr& in_cloud_msg);
 
 	/*!
 	 * Obtains Transformation between two transforms registered in the TF Tree

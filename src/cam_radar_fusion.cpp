@@ -47,11 +47,6 @@ CamRadarFusionApp::TransformPoint(const pcl::PointXYZ &in_point, const tf::Stamp
 
 void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr &in_image_msg , const sensor_msgs::PointCloud2::ConstPtr &in_cloud_msg)
 {
-	if (current_frame_.empty() || image_frame_id_ == "")
-	{
-		ROS_INFO("[%s] Waiting for Image frame to be available.", __APP_NAME__);
-		return;
-	}
 	if (!cam_radar_tf_ok_)
 	{
 		cam_radar_tf_ = FindTransform(image_frame_id_,
@@ -59,7 +54,7 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 	}
 	if (!camera_info_ok_ || !cam_radar_tf_ok_)
 	{
-		ROS_INFO("[%s] Waiting for Camera-Lidar TF and Intrinsics to be available.", __APP_NAME__);
+		ROS_INFO("[%s] Waiting for Camera-Radar TF and Intrinsics to be available.", __APP_NAME__);
 		return;
 	}
 
@@ -73,7 +68,7 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 	{
 		if (in_cloud->points[i].x > 0)
 		{
-			cam_cloud[i] = TransformPoint(in_cloud->points[i], cam_radar_tf_);
+			/*cam_cloud[i] = TransformPoint(in_cloud->points[i], cam_radar_tf_);
 			int u = int(cam_cloud[i].x * fx_ / cam_cloud[i].z + cx_);
 			int v = int(cam_cloud[i].y * fy_ / cam_cloud[i].z + cy_);
 			if ((u >= 0) && (u < image_size_.width)
@@ -82,12 +77,12 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 					)
 			{
 				projection_map.insert(std::pair<cv::Point, pcl::PointXYZ>(cv::Point(u, v), in_cloud->points[i]));
-			}
+			}*/
 		}
 	}
 
 	out_cloud->points.clear();
-
+/*
 #pragma omp for
 	for (int row = 0; row < image_size_.height; row++)
 	{
@@ -110,7 +105,7 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 				out_cloud->points.push_back(colored_3d_point);
 			}
 		}
-	}
+	}*/
 	// Publish PC
 	sensor_msgs::PointCloud2 cloud_msg;
 	pcl::toROSMsg(*out_cloud, cloud_msg);
@@ -160,7 +155,7 @@ CamRadarFusionApp::FindTransform(const std::string &in_target_frame, const std::
 	{
 		transform_listener_->lookupTransform(in_target_frame, in_source_frame, ros::Time(0), transform);
 		cam_radar_tf_ok_ = true;
-		ROS_INFO("[%s] Camera-Lidar TF obtained", __APP_NAME__);
+		ROS_INFO("[%s] Camera-Radar TF obtained", __APP_NAME__);
 	}
 	catch (tf::TransformException ex)
 	{
@@ -181,7 +176,9 @@ void CamRadarFusionApp::InitializeRosIo(ros::NodeHandle &in_private_handle)
 	ROS_INFO("[%s] points_src: %s", __APP_NAME__, points_src.c_str());
 
 	in_private_handle.param<std::string>("image_src", image_src, "/image_rectified");
-	ROS_INFO("[%s] image_src: %s", __APP_NAME__, image_src.c_str()); 
+	ROS_INFO("[%s] image_src: %s", __APP_NAME__, image_src.c_str());
+	// Keep frame id to register to center clouds
+	image_frame_id_ = image_src;
 
 	in_private_handle.param<std::string>("camera_info_src", camera_info_src, "/camera_info");
 	ROS_INFO("[%s] camera_info_src: %s", __APP_NAME__, camera_info_src.c_str());
@@ -213,8 +210,8 @@ void CamRadarFusionApp::InitializeRosIo(ros::NodeHandle &in_private_handle)
 	                            1); 
 
 	ROS_INFO("[%s] Subscribing to %s and %s to approximate time synchronizer.", __APP_NAME__, image_src.c_str(), points_src.c_str());
-	sync_.reset(new Cloud_Sync(SyncPolicyT(10), image_subscriber_, cloud_subscriber_));
-	sync_->registerCallback(boost::bind(&CamRadarFusionApp::FusionCallback, this, _1, _2));
+	cloud_synchronizer_.reset(new Cloud_Sync(SyncPolicyT(10), image_subscriber_, cloud_subscriber_));
+	cloud_synchronizer_->registerCallback(boost::bind(&CamRadarFusionApp::FusionCallback, this, _1, _2));
 
 	publisher_fused_cloud_ = node_handle_.advertise<sensor_msgs::PointCloud2>(fused_topic_str, 1);
 	ROS_INFO("[%s] Publishing fused pointcloud in %s", __APP_NAME__, fused_topic_str.c_str());
@@ -241,5 +238,5 @@ CamRadarFusionApp::CamRadarFusionApp()
 	cam_radar_tf_ok_ = false;
 	camera_info_ok_ = false;
 	//processing_ = false;
-	//image_frame_id_ = "";
+	image_frame_id_ = "";
 }
