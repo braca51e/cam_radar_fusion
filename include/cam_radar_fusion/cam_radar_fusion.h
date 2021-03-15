@@ -57,6 +57,8 @@
 
 #include <image_geometry/pinhole_camera_model.h>
 
+#include <image_transport/image_transport.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl_ros/transforms.h>
@@ -87,7 +89,7 @@ namespace std {
 class CamRadarFusionApp
 {
 	ros::NodeHandle                     node_handle_;
-	ros::Publisher                      publisher_fused_cloud_;
+	image_transport::Publisher          publisher_fused_image_;
 	ros::Subscriber                     intrinsics_subscriber_;
 	image_geometry::PinholeCameraModel  cam_model_;
 

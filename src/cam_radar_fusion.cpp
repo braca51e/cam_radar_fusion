@@ -58,30 +58,35 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 		return;
 	}
 
+	// Get image
+	cv_bridge::CvImagePtr cv_image = cv_bridge::toCvCopy(in_image_msg, sensor_msgs::image_encodings::BGR8);
+	image_size_.height = cv_image->image.rows;
+	image_size_.width = cv_image->image.cols;
+
 	pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	//pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::fromROSMsg(*in_cloud_msg, *in_cloud);
-	std::unordered_map<cv::Point, pcl::PointXYZ> projection_map;
+	//std::unordered_map<cv::Point, pcl::PointXYZ> projection_map;
 
 	std::vector<pcl::PointXYZ> cam_cloud(in_cloud->points.size());
 	for (size_t i = 0; i < in_cloud->points.size(); i++)
 	{
 		if (in_cloud->points[i].x > 0)
 		{
-			/*cam_cloud[i] = TransformPoint(in_cloud->points[i], cam_radar_tf_);
-			int u = int(cam_cloud[i].x * fx_ / cam_cloud[i].z + cx_);
-			int v = int(cam_cloud[i].y * fy_ / cam_cloud[i].z + cy_);
-			if ((u >= 0) && (u < image_size_.width)
-			    && (v >= 0) && (v < image_size_.height)
+			cam_cloud[i] = TransformPoint(in_cloud->points[i], cam_radar_tf_);
+			cv::Point2d xy_point = cam_model_.project3dToPixel( cv::Point3d(cam_cloud[i].x, cam_cloud[i].y, cam_cloud[i].z));
+			if ((xy_point.x >= 0) && (xy_point.x < image_size_.width)
+			    && (xy_point.y >= 0) && (xy_point.y < image_size_.height)
 				//&& cam_cloud[i].z > 0
 					)
 			{
-				projection_map.insert(std::pair<cv::Point, pcl::PointXYZ>(cv::Point(u, v), in_cloud->points[i]));
-			}*/
+				// draw circle 
+				cv::circle(cv_image->image, cv::Point(xy_point.x, xy_point.y), 32, cv::Scalar(0, 255, 0), 1);
+			}
 		}
 	}
 
-	out_cloud->points.clear();
+	//out_cloud->points.clear();
 /*
 #pragma omp for
 	for (int row = 0; row < image_size_.height; row++)
@@ -107,10 +112,11 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 		}
 	}*/
 	// Publish PC
-	sensor_msgs::PointCloud2 cloud_msg;
-	pcl::toROSMsg(*out_cloud, cloud_msg);
-	cloud_msg.header = in_cloud_msg->header;
-	publisher_fused_cloud_.publish(cloud_msg);
+	//sensor_msgs::PointCloud2 cloud_msg;
+	//pcl::toROSMsg(*out_cloud, cloud_msg);
+	//cloud_msg.header = in_cloud_msg->header;
+	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_image->image).toImageMsg();
+	publisher_fused_image_.publish(msg);
 }
 
 void CamRadarFusionApp::IntrinsicsCallback(const sensor_msgs::CameraInfo &in_message)
@@ -213,7 +219,8 @@ void CamRadarFusionApp::InitializeRosIo(ros::NodeHandle &in_private_handle)
 	cloud_synchronizer_.reset(new Cloud_Sync(SyncPolicyT(10), image_subscriber_, cloud_subscriber_));
 	cloud_synchronizer_->registerCallback(boost::bind(&CamRadarFusionApp::FusionCallback, this, _1, _2));
 
-	publisher_fused_cloud_ = node_handle_.advertise<sensor_msgs::PointCloud2>(fused_topic_str, 1);
+	image_transport::ImageTransport image_transport_(in_private_handle);
+	publisher_fused_image_ = image_transport_.advertise(fused_topic_str, 1);
 	ROS_INFO("[%s] Publishing fused pointcloud in %s", __APP_NAME__, fused_topic_str.c_str());
 }
 
