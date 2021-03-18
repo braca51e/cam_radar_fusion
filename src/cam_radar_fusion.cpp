@@ -47,6 +47,7 @@ CamRadarFusionApp::TransformPoint(const pcl::PointXYZ &in_point, const tf::Stamp
 
 void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr &in_image_msg , const sensor_msgs::PointCloud2ConstPtr &in_cloud_msg)
 {
+	ROS_INFO("Callback works!!!!!!!!!!!!");
 	if (!cam_radar_tf_ok_)
 	{
 		cam_radar_tf_ = FindTransform(image_frame_id_,
@@ -82,6 +83,9 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 			{
 				// draw circle 
 				cv::circle(cv_image->image, cv::Point(xy_point.x, xy_point.y), 32, cv::Scalar(0, 255, 0), 1);
+				std::ostringstream ss;
+                ss << "dist: " << cam_cloud[i].z << " m";
+				cv::putText(cv_image->image, ss.str(), cv::Point(xy_point.x, xy_point.y-5), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,0,255), 2, false);
 			}
 		}
 	}
