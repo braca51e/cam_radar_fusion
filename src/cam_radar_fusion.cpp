@@ -47,10 +47,9 @@ CamRadarFusionApp::TransformPoint(const pcl::PointXYZ &in_point, const tf::Stamp
 
 void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPtr &in_image_msg , const sensor_msgs::PointCloud2ConstPtr &in_cloud_msg)
 {
-	ROS_INFO("Callback works!!!!!!!!!!!!");
 	if (!cam_radar_tf_ok_)
 	{
-		cam_radar_tf_ = FindTransform(image_frame_id_,
+		cam_radar_tf_ = FindTransform(in_image_msg->header.frame_id,
 		                                 in_cloud_msg->header.frame_id);
 	}
 	if (!camera_info_ok_ || !cam_radar_tf_ok_)
@@ -58,67 +57,39 @@ void CamRadarFusionApp::FusionCallback(const sensor_msgs::CompressedImageConstPt
 		ROS_INFO("[%s] Waiting for Camera-Radar TF and Intrinsics to be available.", __APP_NAME__);
 		return;
 	}
-
+    //ROS_INFO("[%s] Transforming point starts!", __APP_NAME__);
 	// Get image
 	cv_bridge::CvImagePtr cv_image = cv_bridge::toCvCopy(in_image_msg, sensor_msgs::image_encodings::BGR8);
 	image_size_.height = cv_image->image.rows;
 	image_size_.width = cv_image->image.cols;
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	//pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::fromROSMsg(*in_cloud_msg, *in_cloud);
-	//std::unordered_map<cv::Point, pcl::PointXYZ> projection_map;
 
-	std::vector<pcl::PointXYZ> cam_cloud(in_cloud->points.size());
+	//std::vector<pcl::PointXYZ> cam_cloud(in_cloud->points.size());
+	pcl::PointXYZ transformed_point;
 	for (size_t i = 0; i < in_cloud->points.size(); i++)
 	{
+		//ROS_INFO("[%s] x: %.4f y: %.4f z: %.4f", __APP_NAME__, in_cloud->points[i].x, in_cloud->points[i].y, in_cloud->points[i].z);
 		if (in_cloud->points[i].x > 0)
 		{
-			cam_cloud[i] = TransformPoint(in_cloud->points[i], cam_radar_tf_);
-			cv::Point2d xy_point = cam_model_.project3dToPixel( cv::Point3d(cam_cloud[i].x, cam_cloud[i].y, cam_cloud[i].z));
+			transformed_point = TransformPoint(in_cloud->points[i], cam_radar_tf_);
+			cv::Point2d xy_point = cam_model_.project3dToPixel(cv::Point3d(transformed_point.x, transformed_point.y, transformed_point.z));
 			if ((xy_point.x >= 0) && (xy_point.x < image_size_.width)
 			    && (xy_point.y >= 0) && (xy_point.y < image_size_.height)
-				//&& cam_cloud[i].z > 0
+				//&& transformed_point.z > 0
 					)
 			{
 				// draw circle 
-				cv::circle(cv_image->image, cv::Point(xy_point.x, xy_point.y), 32, cv::Scalar(0, 255, 0), 1);
+				cv::circle(cv_image->image, cv::Point(xy_point.x, xy_point.y), 3, cv::Scalar(0, 255, 0), 5);
 				std::ostringstream ss;
-                ss << "dist: " << cam_cloud[i].z << " m";
-				cv::putText(cv_image->image, ss.str(), cv::Point(xy_point.x, xy_point.y-5), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,0,255), 2, false);
+				//sprintf(buffer, "%d plus %d is %d", a, b, a+b);
+                ss << std::setprecision(2) << transformed_point.z << "m";
+				cv::putText(cv_image->image, ss.str(), cv::Point(xy_point.x, xy_point.y-2), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,0,255), 2, false);
 			}
 		}
 	}
 
-	//out_cloud->points.clear();
-/*
-#pragma omp for
-	for (int row = 0; row < image_size_.height; row++)
-	{
-		for (int col = 0; col < image_size_.width; col++)
-		{
-			std::unordered_map<cv::Point, pcl::PointXYZ>::const_iterator iterator_3d_2d;
-			pcl::PointXYZ corresponding_3d_point;
-			pcl::PointXYZRGB colored_3d_point;
-			iterator_3d_2d = projection_map.find(cv::Point(col, row));
-			if (iterator_3d_2d != projection_map.end())
-			{
-				corresponding_3d_point = iterator_3d_2d->second;
-				cv::Vec3b rgb_pixel = current_frame_.at<cv::Vec3b>(row, col);
-				colored_3d_point.x = corresponding_3d_point.x;
-				colored_3d_point.y = corresponding_3d_point.y;
-				colored_3d_point.z = corresponding_3d_point.z;
-				colored_3d_point.r = rgb_pixel[2];
-				colored_3d_point.g = rgb_pixel[1];
-				colored_3d_point.b = rgb_pixel[0];
-				out_cloud->points.push_back(colored_3d_point);
-			}
-		}
-	}*/
-	// Publish PC
-	//sensor_msgs::PointCloud2 cloud_msg;
-	//pcl::toROSMsg(*out_cloud, cloud_msg);
-	//cloud_msg.header = in_cloud_msg->header;
 	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_image->image).toImageMsg();
 	publisher_fused_image_.publish(msg);
 }
@@ -127,26 +98,6 @@ void CamRadarFusionApp::IntrinsicsCallback(const sensor_msgs::CameraInfo &in_mes
 {
 	image_size_.height = in_message.height;
 	image_size_.width = in_message.width;
-
-	/*camera_instrinsics_ = cv::Mat(3, 3, CV_64F);
-	for (int row = 0; row < 3; row++)
-	{
-		for (int col = 0; col < 3; col++)
-		{
-			camera_instrinsics_.at<double>(row, col) = in_message.K[row * 3 + col];
-		}
-	}
-
-	distortion_coefficients_ = cv::Mat(1, 5, CV_64F);
-	for (int col = 0; col < 5; col++)
-	{
-		distortion_coefficients_.at<double>(col) = in_message.D[col];
-	}
-
-	fx_ = static_cast<float>(in_message.P[0]);
-	fy_ = static_cast<float>(in_message.P[5]);
-	cx_ = static_cast<float>(in_message.P[2]);
-	cy_ = static_cast<float>(in_message.P[6]);*/
 
 	cam_model_.fromCameraInfo(in_message);
 
@@ -248,6 +199,5 @@ CamRadarFusionApp::CamRadarFusionApp()
 {
 	cam_radar_tf_ok_ = false;
 	camera_info_ok_ = false;
-	//processing_ = false;
 	image_frame_id_ = "";
 }

@@ -97,21 +97,14 @@ class CamRadarFusionApp
 	tf::StampedTransform                cam_radar_tf_;
 
 	cv::Size                            image_size_;
-	//cv::Mat                             camera_instrinsics_;
-	//cv::Mat                             distortion_coefficients_;
-	//cv::Mat                             current_frame_;
+
 
 	std::string 						image_frame_id_;
 
-	//bool                                processing_;
 	bool                                camera_info_ok_;
 	bool                                cam_radar_tf_ok_;
 
-	//float                               fx_, fy_, cx_, cy_;
-	//pcl::PointCloud<pcl::PointXYZRGB>   colored_cloud_;
-
 	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::CompressedImage, sensor_msgs::PointCloud2> SyncPolicyT;
-	//typedef message_filters::Synchronizer<SyncPolicyT>* cloud_synchronizer_;
 	typedef message_filters::Synchronizer<SyncPolicyT> Cloud_Sync;
 	boost::shared_ptr<Cloud_Sync>        cloud_synchronizer_;
 
