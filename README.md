@@ -1,15 +1,13 @@
-# LiDAR-Camera Fusion
+# Camera-Radar Fusion
 
-## Pixel-Cloud fusion node
+## Camera-Radar fusion node
 
-This node projects PointCloud to Image space, extracts RGB information from the Image, back-projects it to LiDAR space, and finally publishes a Colored PointCloud.
+This node projects PointCloud to Image plane and publishes a Image with points and distance.
 
 ### Requirements
 
 1. Camera intrinsics
-1. Camera-LiDAR extrinsics
-1. Image rectified being published
-
+1. Compressed Image rectified.
 
 ### How to launch
 
@@ -17,9 +15,6 @@ This node projects PointCloud to Image space, extracts RGB information from the 
 
 `roslaunch cam_radar_fusion cam_radar_fusion.launch`
 
-* From Runtime Manager:
-
-Computing Tab -> Fusion -> cam_radar_fusion
 
 ### Parameters
 
@@ -28,7 +23,7 @@ Launch file available parameters:
 |Parameter| Type| Description|Default|
 ----------|-----|--------|---|
 |`points_src`|*String* |Name of the PointCloud topic to subscribe.|Default `points_raw`|
-|`image_src`|*String*|Name of the Image topic to subscribe **NOTE: Must be a previously rectified image (check Autoware's `image_processor` or ROS `image_proc`.**|Default: `image_rectified`|
+|`image_src`|*String*|Name of the Image topic to subscribe|
 |`camera_info_src`|*String*|Name of the CameraInfo topic that contains the intrinsic matrix for the Image.|`camera_info`|
 
 ### Subscriptions/Publications
@@ -37,13 +32,11 @@ Launch file available parameters:
 ```
 Node [/cam_radar_fusion]
 Publications: 
- * /points_fused [sensor_msgs/PointCloud2]
+ * /points_fused [sensor_msgs/CompressedImage]
 
 Subscriptions: 
- * /image_raw [sensor_msgs/Image]
+ * /image_raw [sensor_msgs/CompressedImage]
  * /points_raw [sensor_msgs/PointCloud2]
  * /camera_info [sensor_msgs/CameraInfo]
  * /tf [tf2_msgs/TFMessage]
 ```
-
-[![Demo Movie](http://img.youtube.com/vi/KhcEpT_3GB4/mqdefault.jpg)](https://www.youtube.com/watch?v=KhcEpT_3GB4)
